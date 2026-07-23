@@ -1,0 +1,15 @@
+# Runtime artifacts
+data.txt
+out.html
+cookies.txt
+result.html
+body.html
+
+.env
+*.local.sh
+*.local.md
+
+# Python
+__pycache__/
+*.pyc
+.claude

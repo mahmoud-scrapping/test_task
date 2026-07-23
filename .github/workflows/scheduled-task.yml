@@ -1,0 +1,59 @@
+name: Scheduled Task
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_email:
+        description: "Send a test message"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  run:
+    if: vars.ENABLED == 'true' || github.event.inputs.test_email == 'true'
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run
+        env:
+          POST_URL: ${{ secrets.POST_URL }}
+          POST_DATA: ${{ secrets.POST_DATA }}
+          READY_MARKER: ${{ secrets.READY_MARKER }}
+          MATCH_MARKER: ${{ secrets.MATCH_MARKER }}
+          MATCH_REGEX: ${{ secrets.MATCH_REGEX }}
+        run: |
+          chmod +x scripts/task.sh
+          ./scripts/task.sh
+
+      - name: Timestamp
+        id: t
+        run: |
+          echo "NOW=$(TZ='${{ vars.TZ }}' date '+%Y-%m-%d %H:%M:%S %Z')" >> "$GITHUB_OUTPUT"
+
+      - name: Notify
+        if: env.FOUND == 'true' || github.event.inputs.test_email == 'true'
+        uses: dawidd6/action-send-mail@v4
+        with:
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          secure: false
+
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+
+          from: Notifier <${{ secrets.EMAIL_FROM }}>
+          to: ${{ secrets.EMAIL_TO }}
+
+          subject: ${{ secrets.EMAIL_SUBJECT }}
+
+          body: |
+            ${{ env.STATUS }}
+
+            ${{ env.AVAILABLE_TIMES }}
+
+            ${{ steps.t.outputs.NOW }}

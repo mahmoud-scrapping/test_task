@@ -1,0 +1,38 @@
+name: Cleanup Old Runs
+
+on:
+  schedule:
+    # Runs at 03:00 UTC every 2 days
+    - cron: "0 3 */2 * *"
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: "Number of most recent runs to keep"
+        required: false
+        default: "20"
+        type: string
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep only the 20 most recent runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          KEEP: ${{ github.event.inputs.keep || '20' }}
+        run: |
+          # The API returns runs newest-first, so skip the first $KEEP ids and delete the rest
+          gh api --paginate \
+            "repos/$REPO/actions/runs?per_page=100" \
+            --jq '.workflow_runs[].id' \
+          | tail -n +$((KEEP + 1)) \
+          | while read -r id; do
+              [ -z "$id" ] && continue
+              echo "Deleting run $id"
+              gh api -X DELETE "repos/$REPO/actions/runs/$id" || echo "  failed to delete $id"
+            done

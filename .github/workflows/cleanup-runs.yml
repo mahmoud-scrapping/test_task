@@ -3,7 +3,7 @@ name: Cleanup Old Runs
 on:
   schedule:
     # Runs at 03:00 UTC every 2 days
-    - cron: "0 3 */2 * *"
+    - cron: "0 19 * * *"
   workflow_dispatch:
     inputs:
       keep:
